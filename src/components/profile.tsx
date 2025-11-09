@@ -12,7 +12,7 @@ import React, { useState, useRef, type HTMLAttributes } from "react";
 import { cn, shortenAddress, uploadFileTurbo } from "@/lib/utils";
 import alienGreen from "@/assets/subspace/alien-green.svg";
 import LoginDialog from "./login-dialog";
-import { ArrowLeftFromLineIcon, Edit2, Edit3, SettingsIcon, UserIcon, Save, X, Camera, Upload, Plus, Search, UserPlus2 } from "lucide-react";
+import { ArrowLeftFromLineIcon, Edit2, Edit3, SettingsIcon, UserIcon, Save, X, Camera, Upload, Plus, Search, UserPlus2, UserCircle } from "lucide-react";
 import { useGlobalState } from "@/hooks/use-global-state";
 import type { PopoverContentProps } from "@radix-ui/react-popover";
 import type { IMember, IRole } from "@subspace-protocol/sdk/types";
@@ -30,8 +30,12 @@ export function ProfileAvatar(props: HTMLAttributes<HTMLDivElement> & { tx: stri
     </Avatar>
 }
 
-export function MyProfileDialog({ children }: { children: React.ReactNode }) {
-    const [open, setOpen] = useState(false)
+export function MyProfileDialog({ children, open: externalOpen, onOpenChange: externalOnOpenChange }: { children?: React.ReactNode, open?: boolean, onOpenChange?: (open: boolean) => void }) {
+    const [internalOpen, setInternalOpen] = useState(false)
+
+    // Use external control if provided, otherwise use internal state
+    const open = externalOpen !== undefined ? externalOpen : internalOpen
+    const setOpen = externalOnOpenChange || setInternalOpen
     const [isLoading, setIsLoading] = useState(false)
     const [uploadStatus, setUploadStatus] = useState<string>("")
     const { address, connected } = useWallet()
@@ -178,7 +182,7 @@ export function MyProfileDialog({ children }: { children: React.ReactNode }) {
     }
 
     return <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger asChild>{children}</DialogTrigger>
+        {children && <DialogTrigger asChild>{children}</DialogTrigger>}
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto border-border">
             <DialogHeader className="pb-4">
                 <DialogTitle className="text-xl font-semibold text-primary flex items-center gap-2">
@@ -325,6 +329,125 @@ export function MyProfileDialog({ children }: { children: React.ReactNode }) {
                 >
                     <Save size={16} />
                     {isLoading ? uploadStatus || "Saving..." : "Save Changes"}
+                </Button>
+            </div>
+        </DialogContent>
+    </Dialog>
+}
+
+export function EditServerProfileDialog({ serverId, userId, children, open: externalOpen, onOpenChange: externalOnOpenChange }: { serverId: string, userId: string, children?: React.ReactNode, open?: boolean, onOpenChange?: (open: boolean) => void }) {
+    const [internalOpen, setInternalOpen] = useState(false)
+
+    // Use external control if provided, otherwise use internal state
+    const open = externalOpen !== undefined ? externalOpen : internalOpen
+    const setOpen = externalOnOpenChange || setInternalOpen
+    const [isLoading, setIsLoading] = useState(false)
+    const subspaceActions = useSubspaceActions()
+    const member = useMember(serverId, userId)
+    const primaryName = usePrimaryName(userId)
+
+    // Form state
+    const [nicknameInput, setNicknameInput] = useState(member?.nickname || "")
+
+    // Reset form when dialog opens or member changes
+    React.useEffect(() => {
+        if (open && member) {
+            setNicknameInput(member.nickname || "")
+        }
+    }, [open, member])
+
+    const handleSave = async () => {
+        if (!serverId || !userId) return
+
+        setIsLoading(true)
+        try {
+            // Explicitly handle empty string to unset nickname
+            const trimmedNickname = nicknameInput.trim()
+            const nicknameToSave = trimmedNickname === "" ? null : trimmedNickname
+
+            await subspaceActions.servers.updateMember({
+                serverId: serverId,
+                userId: userId,
+                nickname: nicknameToSave
+            })
+
+            // Refresh member data
+            await subspaceActions.servers.getMember({
+                serverId: serverId,
+                userId: userId
+            })
+
+            window.toast?.success("Nickname updated successfully!")
+            setOpen(false)
+        } catch (error) {
+            console.error("Failed to update nickname:", error)
+            window.toast?.error("Failed to update nickname. Please try again.")
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    const handleCancel = () => {
+        // Reset form to original value
+        setNicknameInput(member?.nickname || "")
+        setOpen(false)
+    }
+
+    return <Dialog open={open} onOpenChange={setOpen}>
+        {children && <DialogTrigger asChild>{children}</DialogTrigger>}
+        <DialogContent className="max-w-md border-border">
+            <DialogHeader className="pb-4">
+                <DialogTitle className="text-xl font-semibold text-primary flex items-center gap-2">
+                    <UserCircle size={20} />
+                    Edit Server Profile
+                </DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-4">
+                {/* Nickname Section */}
+                <div className="space-y-2">
+                    <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Nickname</h3>
+                    <label htmlFor="nickname-edit" className="text-sm font-medium text-muted-foreground sr-only">
+                        Nickname
+                    </label>
+                    <Input
+                        id="nickname-edit"
+                        placeholder={primaryName || "Enter your nickname..."}
+                        value={nicknameInput}
+                        onChange={(e) => setNicknameInput(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                handleSave()
+                            }
+                        }}
+                        disabled={isLoading}
+                        className="bg-muted border-border"
+                        maxLength={32}
+                    />
+                    <div className="text-xs text-muted-foreground">
+                        {nicknameInput.length}/32 characters {nicknameInput.trim() === "" && "(Empty will use primary name)"}
+                    </div>
+                </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-end gap-3 pt-6 border-t border-border">
+                <Button
+                    variant="ghost"
+                    onClick={handleCancel}
+                    disabled={isLoading}
+                    className="bg-muted hover:bg-muted/80 text-muted-foreground"
+                >
+                    <X size={16} />
+                    Cancel
+                </Button>
+                <Button
+                    onClick={handleSave}
+                    disabled={isLoading}
+                    className="bg-primary/70 hover:bg-primary/90 text-primary-foreground"
+                >
+                    <Save size={16} />
+                    {isLoading ? "Saving..." : "Save Changes"}
                 </Button>
             </div>
         </DialogContent>
@@ -563,7 +686,20 @@ export function ProfilePopover(props: PopoverContentProps & { userId: string }) 
             {props.children}
         </PopoverTrigger>
         <PopoverContent sideOffset={7} className="w-74 overflow-clip bg-gradient-to-br from-background/95 via-background/90 to-background/85 backdrop-blur-md border-2 border-primary/20 shadow-2xl" {...rest}>
-            {!isOwnProfile && !isFriendOrPending && (
+            {/* Action buttons in top right corner */}
+            {isOwnProfile ? (
+                <div className="absolute top-2 right-1.5 flex items-center gap-1 z-50">
+                    <EditServerProfileDialog serverId={activeServerId} userId={userId}>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5 bg-background/20 hover:!bg-background/50 backdrop-blur pl-0.5"
+                        >
+                            <Edit2 size={20} className="!w-3.5 !h-3.5" />
+                        </Button>
+                    </EditServerProfileDialog>
+                </div>
+            ) : !isFriendOrPending && (
                 <div className="absolute top-2 right-1.5 flex items-center gap-1 z-50">
                     <Button
                         variant="ghost"
