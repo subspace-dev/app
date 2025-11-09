@@ -313,7 +313,7 @@ export default function App() {
                         Set Your Server Nickname
                     </DialogTitle>
                     <DialogDescription className="text-muted-foreground pt-2">
-                        Help others identify you on this server! Set a nickname to personalize your presence.
+                        Help others identify you on this server! Set a nickname to personalize your presence. You can change this later in your profile settings.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 pt-4">
@@ -323,7 +323,7 @@ export default function App() {
                         </label>
                         <Input
                             id="nickname"
-                            placeholder="Enter your nickname..."
+                            placeholder="Enter a nickname..."
                             value={nicknameInput}
                             onChange={(e) => setNicknameInput(e.target.value)}
                             onKeyDown={(e) => {

@@ -1,5 +1,5 @@
 import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useMember, usePrimaryName, useProfile, useProfiles, useRoles, useSubspace, useSubspaceActions, useWanderTier } from "@/hooks/use-subspace";
+import { useMember, usePrimaryName, useProfile, useProfiles, useRoles, useServer, useSubspace, useSubspaceActions, useWanderTier } from "@/hooks/use-subspace";
 import { useWallet } from "@/hooks/use-wallet";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Button } from "./ui/button";
@@ -42,6 +42,10 @@ export function MyProfileDialog({ children, open: externalOpen, onOpenChange: ex
     const profile = useProfile(address)
     const primaryName = usePrimaryName(address)
     const { actions } = useSubspace()
+    const { activeServerId } = useGlobalState()
+    const subspaceActions = useSubspaceActions()
+    const currentMember = useMember(activeServerId, address)
+    const currentServer = useServer(activeServerId)
 
     // File input refs
     const bannerInputRef = useRef<HTMLInputElement>(null)
@@ -51,13 +55,17 @@ export function MyProfileDialog({ children, open: externalOpen, onOpenChange: ex
     const [pfpFile, setPfpFile] = useState<File | null>(null)
     const [bannerFile, setBannerFile] = useState<File | null>(null)
     const [bio, setBio] = useState(profile?.bio || "")
+    const [serverNickname, setServerNickname] = useState(currentMember?.nickname || "")
 
-    // Reset form when profile changes or dialog opens
+    // Reset form when profile/member changes or dialog opens
     React.useEffect(() => {
         if (open && profile) {
             setBio(profile.bio || "")
         }
-    }, [open, profile])
+        if (open && currentMember) {
+            setServerNickname(currentMember.nickname || "")
+        }
+    }, [open, profile, currentMember])
 
     // File handling functions
     const handleBannerClick = () => {
@@ -102,6 +110,8 @@ export function MyProfileDialog({ children, open: externalOpen, onOpenChange: ex
 
         try {
             const updateData: any = {}
+            let hasProfileChanges = false
+            let hasServerChanges = false
 
             // Upload profile picture if changed
             if (pfpFile) {
@@ -111,6 +121,7 @@ export function MyProfileDialog({ children, open: externalOpen, onOpenChange: ex
                 if (pfpTxId) {
                     updateData.pfp = pfpTxId
                     console.log("Profile picture uploaded:", pfpTxId)
+                    hasProfileChanges = true
                 } else {
                     throw new Error("Failed to upload profile picture")
                 }
@@ -124,6 +135,7 @@ export function MyProfileDialog({ children, open: externalOpen, onOpenChange: ex
                 if (bannerTxId) {
                     updateData.banner = bannerTxId
                     console.log("Banner uploaded:", bannerTxId)
+                    hasProfileChanges = true
                 } else {
                     throw new Error("Failed to upload banner image")
                 }
@@ -132,14 +144,40 @@ export function MyProfileDialog({ children, open: externalOpen, onOpenChange: ex
             // Update bio if changed
             if (bio !== (profile?.bio || "")) {
                 updateData.bio = bio
+                hasProfileChanges = true
             }
 
-            // Only update if there are changes
-            if (Object.keys(updateData).length > 0) {
+            // Update profile if there are profile changes
+            if (hasProfileChanges) {
                 setUploadStatus("Updating profile...")
                 console.log("Updating profile with data:", updateData)
                 await actions.profiles.update(updateData)
-                setUploadStatus("Profile updated successfully!")
+            }
+
+            // Update server nickname if changed and server is active
+            if (activeServerId && serverNickname !== (currentMember?.nickname || "")) {
+                setUploadStatus("Updating server nickname...")
+                const trimmedNickname = serverNickname.trim()
+                const nicknameToSave = trimmedNickname === "" ? null : trimmedNickname
+
+                await subspaceActions.servers.updateMember({
+                    serverId: activeServerId,
+                    userId: address,
+                    nickname: nicknameToSave
+                })
+
+                // Refresh member data
+                await subspaceActions.servers.getMember({
+                    serverId: activeServerId,
+                    userId: address
+                })
+
+                hasServerChanges = true
+            }
+
+            // Show success message if any changes were made
+            if (hasProfileChanges || hasServerChanges) {
+                setUploadStatus("Updated successfully!")
 
                 // Brief success message before closing
                 setTimeout(() => {
@@ -157,8 +195,8 @@ export function MyProfileDialog({ children, open: externalOpen, onOpenChange: ex
                 setOpen(false)
             }
         } catch (error) {
-            console.error("Failed to update profile:", error)
-            setUploadStatus("Failed to update profile. Please try again.")
+            console.error("Failed to update:", error)
+            setUploadStatus("Failed to update. Please try again.")
 
             // Clear error message after 3 seconds
             setTimeout(() => {
@@ -172,6 +210,7 @@ export function MyProfileDialog({ children, open: externalOpen, onOpenChange: ex
     const handleCancel = () => {
         // Reset form to original values
         setBio(profile?.bio || "")
+        setServerNickname(currentMember?.nickname || "")
         setPfpFile(null)
         setBannerFile(null)
         setUploadStatus("")
@@ -280,6 +319,23 @@ export function MyProfileDialog({ children, open: externalOpen, onOpenChange: ex
                     {/* Spacing for overlapping PFP */}
                     <div className="h-8"></div>
                 </div>
+
+                {/* Server Nickname Section - Only show if server is active */}
+                {activeServerId && (
+                    <div className="space-y-3">
+                        <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Nickname in '{currentServer?.profile?.name || "Unknown"}'</h3>
+                        <Input
+                            value={serverNickname}
+                            onChange={(e) => setServerNickname(e.target.value)}
+                            placeholder={primaryName || "Enter server nickname..."}
+                            className="bg-muted border-border"
+                            maxLength={32}
+                        />
+                        <div className="text-xs text-muted-foreground">
+                            {serverNickname.length}/32 characters {serverNickname.trim() === "" && "(Empty will use primary name)"}
+                        </div>
+                    </div>
+                )}
 
                 {/* Bio Section */}
                 <div className="space-y-3">
@@ -689,7 +745,7 @@ export function ProfilePopover(props: PopoverContentProps & { userId: string }) 
             {/* Action buttons in top right corner */}
             {isOwnProfile ? (
                 <div className="absolute top-2 right-1.5 flex items-center gap-1 z-50">
-                    <EditServerProfileDialog serverId={activeServerId} userId={userId}>
+                    <MyProfileDialog>
                         <Button
                             variant="ghost"
                             size="icon"
@@ -697,7 +753,7 @@ export function ProfilePopover(props: PopoverContentProps & { userId: string }) 
                         >
                             <Edit2 size={20} className="!w-3.5 !h-3.5" />
                         </Button>
-                    </EditServerProfileDialog>
+                    </MyProfileDialog>
                 </div>
             ) : !isFriendOrPending && (
                 <div className="absolute top-2 right-1.5 flex items-center gap-1 z-50">

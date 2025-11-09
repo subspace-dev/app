@@ -383,9 +383,9 @@ function DateDivider({ timestamp }: { timestamp: number }) {
     return (
         <div className="flex items-center gap-3 py-4 px-3">
             <div className="flex-1 h-px bg-border"></div>
-            <Tooltip>
+            <Tooltip delayDuration={500}>
                 <TooltipTrigger asChild>
-                    <div className="text-xs font-ocr text-muted-foreground/60 px-2 bg-background cursor-help">
+                    <div className="text-xs font-ocr text-muted-foreground/60 px-2 bg-background">
                         {dateLabel}
                     </div>
                 </TooltipTrigger>
@@ -442,9 +442,9 @@ function Message({ message, serverId }: { message: IMessage, serverId: string })
                         {member?.nickname || primaryName || <span className="text-xs opacity-60">{shortenAddress(message.author_id)}</span>}
                     </div>
                 </ProfilePopover>
-                <Tooltip>
+                <Tooltip delayDuration={500}>
                     <TooltipTrigger asChild>
-                        <div className="text-xs text-muted-foreground/40 cursor-help group-hover:visible invisible">{relativeTimeString}</div>
+                        <div className="text-xs text-muted-foreground/40 group-hover:visible invisible">{relativeTimeString}</div>
                     </TooltipTrigger>
                     <TooltipContent className="bg-secondary/40 text-foreground backdrop-blur text-xs" sideOffset={7} side="bottom">
                         <p className="text-xs">{absoluteDateTimeString}</p>
