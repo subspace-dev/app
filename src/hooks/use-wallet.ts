@@ -6,6 +6,7 @@ import type { JWKInterface } from "arweave/web/lib/wallet";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { WAuth, WAuthProviders } from "@wauth/sdk";
 import { createSigner } from "@permaweb/aoconnect";
+import { QuickWallet } from "quick-wallet";
 
 export enum ConnectionStrategies {
     ArWallet = "ar_wallet",
@@ -105,6 +106,7 @@ export const useWallet = create<WalletState>()(persist((set, get) => ({
                         connected: false,
                         connectionStrategy: null,
                         provider: null,
+                        jwk: undefined,
                     });
                 } else {
                     console.log("[useWallet] WAuth PocketBase authentication valid, checking session...");
@@ -140,6 +142,7 @@ export const useWallet = create<WalletState>()(persist((set, get) => ({
                                     connected: false,
                                     connectionStrategy: null,
                                     provider: null,
+                                    jwk: undefined
                                 });
                             }
                         });
@@ -184,6 +187,7 @@ export const useWallet = create<WalletState>()(persist((set, get) => ({
                                     connected: false,
                                     connectionStrategy: null,
                                     provider: null,
+                                    jwk: undefined
                                 });
                             }
                             throw new Error("Not logged in to WAuth");
@@ -230,8 +234,8 @@ export const useWallet = create<WalletState>()(persist((set, get) => ({
                     }
                 case ConnectionStrategies.GuestUser:
                     {
-                        console.warn("Guest user mode doesn't support signing operations. Some features may be limited.");
-                        return null;
+                        return createSigner(QuickWallet)
+
                     }
                 default:
                     throw new Error(`Connection Strategy ${get().connectionStrategy} does not have a signer implemented yet`)
@@ -262,7 +266,7 @@ export const useWallet = create<WalletState>()(persist((set, get) => ({
                                 connectionStrategy: ConnectionStrategies.ScannedJWK,
                                 wanderInstance: null,
                                 jwk: jwk,
-                                provider: null
+                                provider: null,
                             }
                         })
                         triggerAuthenticatedEvent(addr)
@@ -290,7 +294,8 @@ export const useWallet = create<WalletState>()(persist((set, get) => ({
                                             wanderInstance: null,
                                             wauthInstance: state.wauthInstance,
                                             jwk: null,
-                                            provider: provider
+                                            provider: provider,
+
                                         }
                                     })
                                     triggerAuthenticatedEvent(wallet.address)
@@ -325,7 +330,7 @@ export const useWallet = create<WalletState>()(persist((set, get) => ({
                                             wanderInstance: null,
                                             wauthInstance: state.wauthInstance,
                                             jwk: null,
-                                            provider: provider
+                                            provider: provider,
                                         }
                                     })
                                     triggerAuthenticatedEvent(wallet.address)
@@ -370,7 +375,18 @@ export const useWallet = create<WalletState>()(persist((set, get) => ({
                     break;
                 }
                 case ConnectionStrategies.GuestUser: {
-                    // generate jwk and connect
+                    QuickWallet.connect()
+                    const addy = await QuickWallet.getActiveAddress()
+                    set((state) => {
+                        return {
+                            address: addy,
+                            connected: true,
+                            connectionStrategy: ConnectionStrategies.GuestUser,
+                            wanderInstance: null,
+                            jwk: null,
+                            provider: null
+                        }
+                    })
                     break;
                 }
                 case ConnectionStrategies.ArWallet: {
@@ -396,7 +412,7 @@ export const useWallet = create<WalletState>()(persist((set, get) => ({
                                         wanderInstance: null,
                                         wauthInstance: null,
                                         jwk: null,
-                                        provider: null
+                                        provider: null,
                                     }
                                 })
                                 triggerAuthenticatedEvent(address)
@@ -434,7 +450,7 @@ export const useWallet = create<WalletState>()(persist((set, get) => ({
                                                         wanderInstance: wander,
                                                         wauthInstance: null,
                                                         jwk: null,
-                                                        provider: null
+                                                        provider: null,
                                                     }
                                                 })
                                                 wander.close();
@@ -481,7 +497,7 @@ export const useWallet = create<WalletState>()(persist((set, get) => ({
                     wanderInstance: null,
                     wauthInstance: null,
                     jwk: undefined,
-                    provider: null
+                    provider: null,
                 }
             })
             if (reload) window.location.reload();

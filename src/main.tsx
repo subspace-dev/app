@@ -35,6 +35,8 @@ import ServerSettings from '@/routes/app/server-settings';
 import AppSettings from '@/routes/app/app-settings';
 import Invite from '@/routes/invite';
 import { fetchSubspaceProcessId, respawnSubspaceProcess } from './lib/utils';
+import { QuickWallet } from 'quick-wallet';
+import { createSigner } from '@permaweb/aoconnect';
 
 interface ErrorBoundaryState {
     hasError: boolean;
@@ -386,7 +388,8 @@ function Main() {
                 await walletActions.connect({ strategy: connectionStrategy, jwk })
             } else if (connectionStrategy === ConnectionStrategies.WAuth) {
                 await walletActions.connect({ strategy: connectionStrategy, provider })
-            } else {
+            }
+            else {
                 await walletActions.connect({ strategy: connectionStrategy })
             }
         } catch (error) {

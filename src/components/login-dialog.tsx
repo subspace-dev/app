@@ -1,6 +1,7 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 
 import wander from "@/assets/logos/wander.png"
+import quickwallet from "@/assets/logos/quickwallet.svg"
 import arweave from "@/assets/logos/arweave.svg"
 import metamask from "@/assets/logos/metamask.svg"
 import discord from "@/assets/logos/discord.svg"
@@ -20,6 +21,7 @@ import { Progress } from "@/components/ui/progress";
 import { useIsMobileDevice } from "@/hooks/use-mobile"
 import { WAuthProviders } from "@wauth/sdk"
 import { Link } from "react-router"
+import { QuickWallet } from "quick-wallet"
 
 const totalScanSteps = 7;
 
@@ -107,6 +109,8 @@ export default function LoginDialog({ children }: { children: React.ReactNode })
             walletActions.connect({ strategy: ConnectionStrategies.ArWallet })
         } else if (strategy === ConnectionStrategies.WanderConnect) {
             walletActions.connect({ strategy: ConnectionStrategies.WanderConnect })
+        } else if (strategy === ConnectionStrategies.GuestUser) {
+            walletActions.connect({ strategy: ConnectionStrategies.GuestUser })
         }
     }
 
@@ -241,21 +245,16 @@ export default function LoginDialog({ children }: { children: React.ReactNode })
                                     </Button>
                                 </Link>}
 
-                                {/* <Button
+                                <Button
                                     variant="outline"
                                     className="w-full h-12 justify-between font-ocr border-primary/30 text-primary/80 hover:bg-primary/10 hover:border-primary/40"
                                     onClick={() => {
-                                        if (wanderInstance) {
-                                            wanderInstance.open()
-                                        } else {
-                                            handleLoginOptionClicked(ConnectionStrategies.WanderConnect)
-                                        }
-                                        clickClose()
+                                        handleLoginOptionClicked(ConnectionStrategies.GuestUser)
                                     }}
                                 >
-                                    <span>Wander Connect</span>
-                                    <img src={wander} className="w-6 h-6 object-contain" />
-                                </Button> */}
+                                    <span>Guest Login</span>
+                                    <img src={quickwallet} className="w-6 h-6 object-contain" />
+                                </Button>
                             </div>
 
                             {/* Development Options */}
@@ -271,22 +270,6 @@ export default function LoginDialog({ children }: { children: React.ReactNode })
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Button
-                                            variant="ghost"
-                                            className="w-full h-10 justify-between text-xs font-ocr border border-primary/20 hover:bg-primary/5"
-                                            onClick={() => {
-                                                const jwk = prompt("Enter the JWK string")
-                                                if (jwk) {
-                                                    const jwkObj = JSON.parse(jwk)
-                                                    jwkObj.kty = "RSA"
-                                                    jwkObj.e = "AQAB"
-                                                    handleLoginOptionClicked(ConnectionStrategies.ScannedJWK, jwkObj)
-                                                }
-                                            }}
-                                        >
-                                            <span>Simulate delegation</span>
-                                            <span className="text-primary/40">dev only</span>
-                                        </Button>
 
                                         <Button
                                             variant="ghost"

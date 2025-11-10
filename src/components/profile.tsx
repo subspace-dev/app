@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useMember, usePrimaryName, useProfile, useProfiles, useRoles, useServer, useSubspace, useSubspaceActions, useWanderTier } from "@/hooks/use-subspace";
-import { useWallet } from "@/hooks/use-wallet";
+import { ConnectionStrategies, useWallet } from "@/hooks/use-wallet";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Button } from "./ui/button";
 import { Avatar } from "./ui/avatar";
@@ -20,6 +20,8 @@ import { Badge } from "./ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { Link } from "react-router";
 import { Constants } from "@/lib/constants";
+import { ArconnectSigner, ArweaveSigner } from "@ar.io/sdk";
+import { QuickWallet } from "quick-wallet";
 
 export function ProfileAvatar(props: HTMLAttributes<HTMLDivElement> & { tx: string }) {
     // validate tx is a valid arweave transaction
@@ -38,7 +40,7 @@ export function MyProfileDialog({ children, open: externalOpen, onOpenChange: ex
     const setOpen = externalOnOpenChange || setInternalOpen
     const [isLoading, setIsLoading] = useState(false)
     const [uploadStatus, setUploadStatus] = useState<string>("")
-    const { address, connected } = useWallet()
+    const { address, connected, connectionStrategy, actions: walletActions } = useWallet()
     const profile = useProfile(address)
     const primaryName = usePrimaryName(address)
     const { actions } = useSubspace()
@@ -113,11 +115,17 @@ export function MyProfileDialog({ children, open: externalOpen, onOpenChange: ex
             let hasProfileChanges = false
             let hasServerChanges = false
 
+            let signer = undefined
+            if (connectionStrategy === ConnectionStrategies.GuestUser) {
+                QuickWallet.connect()
+                signer = new ArconnectSigner(QuickWallet as any)
+            }
+
             // Upload profile picture if changed
             if (pfpFile) {
                 setUploadStatus("Uploading profile picture...")
                 console.log("Uploading profile picture...")
-                const pfpTxId = await uploadFileTurbo(pfpFile)
+                const pfpTxId = await uploadFileTurbo(pfpFile, null, signer ? signer : null)
                 if (pfpTxId) {
                     updateData.pfp = pfpTxId
                     console.log("Profile picture uploaded:", pfpTxId)
@@ -131,7 +139,7 @@ export function MyProfileDialog({ children, open: externalOpen, onOpenChange: ex
             if (bannerFile) {
                 setUploadStatus("Uploading banner image...")
                 console.log("Uploading banner image...")
-                const bannerTxId = await uploadFileTurbo(bannerFile)
+                const bannerTxId = await uploadFileTurbo(bannerFile, null, signer ? signer : null)
                 if (bannerTxId) {
                     updateData.banner = bannerTxId
                     console.log("Banner uploaded:", bannerTxId)
