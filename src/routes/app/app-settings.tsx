@@ -1,9 +1,11 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, GitBranch, Package, Code2, Zap, Github, Box, ExternalLink, Cpu } from "lucide-react"
+import { ArrowLeft, GitBranch, Package, Code2, Zap, Github, Box, ExternalLink, Cpu, AlertTriangle, Download } from "lucide-react"
 import { Link } from "react-router"
 import xLogo from "@/assets/logos/x.svg"
 import { Subspace } from "@subspace-protocol/sdk"
+import { ConnectionStrategies, useWallet } from "@/hooks/use-wallet"
+import { downloadKeyfile } from "quick-wallet"
 
 declare const __VERSION__: string
 declare const __COMMIT_HASH__: string
@@ -11,6 +13,8 @@ declare const __SDK_VERSION__: string
 declare const __SDK_COMMIT_HASH__: string
 
 export default function AppSettings() {
+    const { connectionStrategy, address } = useWallet()
+
     const versionPairs = [
         {
             left: {
@@ -222,6 +226,27 @@ export default function AppSettings() {
                             </div>
                         </CardContent>
                     </Card>
+
+                    {connectionStrategy === ConnectionStrategies.GuestUser && <>
+                        <Card className="border-border relative">
+                            <CardHeader>
+                                <CardTitle className="font-ocr flex gap-2 items-center">
+                                    Guest User<span className="rounded-full bg-yellow-100/20 flex items-center justify-center p-0.5 pb-1 aspect-square w-5 h-5"><AlertTriangle className="w-4 h-4 text-yellow-300" /></span></CardTitle>
+                                <CardDescription>
+                                    You are currently connected as a Guest User
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <p className="text-sm text-muted-foreground leading-relaxed">
+                                    In Guest User mode, your identity is temporary and stored only in this browser.
+                                    If you clear your browser data or switch devices, you will lose access to your
+                                    Subspace account and messages. For a permanent, secure identity, please connect
+                                    using ArConnect or another supported wallet.
+                                </p>
+                            </CardContent>
+                            <Button size="sm" className="absolute top-4 right-4" onClick={() => downloadKeyfile(`subspace_guest_user-${address}.json`)}><Download />Save Wallet</Button>
+                        </Card>
+                    </>}
                 </div>
             </div>
         </div>
