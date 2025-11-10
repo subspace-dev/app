@@ -20,7 +20,7 @@ import { Badge } from "./ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { Link } from "react-router";
 import { Constants } from "@/lib/constants";
-import { ArconnectSigner, ArweaveSigner } from "@ar.io/sdk";
+import { ArconnectSigner, ArweaveSigner } from "@ardrive/turbo-sdk/web";
 import { QuickWallet } from "quick-wallet";
 
 export function ProfileAvatar(props: HTMLAttributes<HTMLDivElement> & { tx: string }) {

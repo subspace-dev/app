@@ -389,7 +389,7 @@ function DateDivider({ timestamp }: { timestamp: number }) {
                         {dateLabel}
                     </div>
                 </TooltipTrigger>
-                <TooltipContent className="bg-secondary/40 text-foreground backdrop-blur text-xs" sideOffset={7} side="bottom">
+                <TooltipContent className="bg-secondary/40 text-foreground backdrop-blur text-xs" sideOffset={7} side="top">
                     <p className="text-xs">{absoluteDateString}</p>
                 </TooltipContent>
             </Tooltip>
@@ -446,7 +446,7 @@ function Message({ message, serverId }: { message: IMessage, serverId: string })
                     <TooltipTrigger asChild>
                         <div className="text-xs text-muted-foreground/40 group-hover:visible invisible">{relativeTimeString}</div>
                     </TooltipTrigger>
-                    <TooltipContent className="bg-secondary/40 text-foreground backdrop-blur text-xs" sideOffset={7} side="bottom">
+                    <TooltipContent className="bg-secondary/40 text-foreground backdrop-blur text-xs" sideOffset={7} side="top">
                         <p className="text-xs">{absoluteDateTimeString}</p>
                     </TooltipContent>
                 </Tooltip>

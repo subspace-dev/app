@@ -42,8 +42,7 @@ export const useGlobalState = create<GlobalState>()(persist((set, get) => ({
             set({
                 activeServerId: "",
                 activeChannelId: "",
-                activeFriendId: "",
-                lastChannelByServer: {}
+                activeFriendId: ""
             })
         },
         getLastChannelForServer: (serverId: string) => {

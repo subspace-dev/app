@@ -6,6 +6,8 @@ import type { JWKInterface } from "arweave/web/lib/wallet"
 import Arweave from "arweave"
 import { ArconnectSigner, ArweaveSigner, TurboFactory } from '@ardrive/turbo-sdk/web';
 import { TIER_ID_TO_NAME, type IWanderTier } from "./types"
+import imageCompression from 'browser-image-compression';
+import { ca } from "date-fns/locale"
 
 
 export function cn(...inputs: ClassValue[]) {
@@ -170,7 +172,19 @@ export async function uploadFileAR(file: File, jwk?: JWKInterface) {
     }
 }
 
-export async function uploadFileTurbo(file: File, jwk?: JWKInterface, customSigner?: any) {
+const compressionOptions = {
+    maxSizeMB: 0.1, // Hard limit of 100KB
+    maxWidthOrHeight: 1200, // Balanced resolution for quality vs size
+    useWebWorker: true,
+    initialQuality: 0.9, // High quality starting point
+    maxIteration: 30, // More iterations to find optimal balance
+    fileType: 'image/jpeg', // JPEG for better compression
+    alwaysKeepResolution: false, // Allow smart resolution adjustment
+    preserveExif: false, // Remove EXIF data to save space
+}
+
+
+export async function uploadFileTurbo(file: File, jwk?: JWKInterface, customSigner?: any, retry = false): Promise<string | undefined> {
     const signer = customSigner ? customSigner : jwk ? new ArweaveSigner(jwk) : new ArconnectSigner(window.arweaveWallet)
     try {
         const turbo = TurboFactory.authenticated({ signer, cuUrl: "https://cu.ardrive.io" })
@@ -190,7 +204,22 @@ export async function uploadFileTurbo(file: File, jwk?: JWKInterface, customSign
         return res.id;
     } catch (error) {
         console.error("Failed to upload file to Turbo:", error)
-        return undefined
+        if (retry) return undefined
+
+        if (file.size > 100 * 1024) {
+            console.warn("Retrying upload with image compression...")
+            // retry upload with image Compression
+            try {
+                const finalFile = await imageCompression(file, compressionOptions);
+                return uploadFileTurbo(finalFile, jwk, customSigner, true)
+            } catch (error) {
+                console.error("Image compression failed:", error)
+                return undefined
+            }
+        } else {
+            return undefined
+        }
+
     }
 }
 

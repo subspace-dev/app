@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useGlobalState } from "@/hooks/use-global-state";
 import { useServer, useSubspaceActions, useMembers, useRoles, useProfile, usePrimaryName, useMember } from "@/hooks/use-subspace";
-import { useWallet } from "@/hooks/use-wallet";
+import { ConnectionStrategies, useWallet } from "@/hooks/use-wallet";
 import { Subspace } from "@subspace-protocol/sdk";
 import { ProfileAvatar } from "@/components/profile";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,8 @@ import type { Inputs, IMember } from "@subspace-protocol/sdk/types";
 import { Camera, Upload, Save, X, Settings, ArrowLeft, Users, Shield, Hash, Info, Palette, Plus, Search, Trash2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router";
 import alienGreen from "@/assets/subspace/alien-green.svg";
+import { ArconnectSigner } from "@ardrive/turbo-sdk/web";
+import { QuickWallet } from "quick-wallet";
 
 // Helper function to check if a member has any of the specified permissions
 function memberHasAnyPermission(member: IMember, server: any, permissions: number[]): boolean {
@@ -395,7 +397,7 @@ export default function ServerSettings() {
     const server = useServer(serverId);
     const members = useMembers(serverId);
     const roles = useRoles(serverId);
-    const { address, connected } = useWallet();
+    const { address, connected, connectionStrategy } = useWallet();
     const { servers: serverActions } = useSubspaceActions();
 
     // Loading and status states
@@ -516,11 +518,16 @@ export default function ServerSettings() {
                 serverId: serverId
             };
 
+            let signer = undefined;
+            if (connectionStrategy === ConnectionStrategies.GuestUser) {
+                signer = new ArconnectSigner(QuickWallet as any)
+            }
+
             // Upload server icon if changed
             if (iconFile) {
                 setUploadStatus("Uploading server icon...");
                 console.log("Uploading server icon...");
-                const iconTxId = await uploadFileTurbo(iconFile);
+                const iconTxId = await uploadFileTurbo(iconFile, undefined, signer ? signer : null);
                 if (iconTxId) {
                     updateData.serverPfp = iconTxId;
                     console.log("Server icon uploaded:", iconTxId);
@@ -533,7 +540,7 @@ export default function ServerSettings() {
             if (bannerFile) {
                 setUploadStatus("Uploading banner image...");
                 console.log("Uploading banner image...");
-                const bannerTxId = await uploadFileTurbo(bannerFile);
+                const bannerTxId = await uploadFileTurbo(bannerFile, undefined, signer ? signer : null);
                 if (bannerTxId) {
                     updateData.serverBanner = bannerTxId;
                     console.log("Banner uploaded:", bannerTxId);
